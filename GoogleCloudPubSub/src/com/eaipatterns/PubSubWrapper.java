@@ -1,3 +1,10 @@
+/*
+ * Example implementations for Enterprise Integration Patterns
+ * www.EnterpriseIntegrationPatterns.com
+ *
+ * Simple example of Publish-Subscribe Channel with Google Cloud PubSub
+ */
+
 package com.eaipatterns;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential;
@@ -20,7 +27,7 @@ import java.util.List;
 /**
  * A thin wrapper around the Google Cloud PubSub API
  */
-public class PubSubWrapper {
+class PubSubWrapper {
 
     private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
     private final String project;
@@ -30,7 +37,7 @@ public class PubSubWrapper {
         this.project = String.format("projects/%s", projectName);
     }
 
-    public static PubSubWrapper getInstance(
+    static PubSubWrapper getInstance(
             String private_key_file_path,
             String service_account_email,
             String projectName)
@@ -113,7 +120,7 @@ public class PubSubWrapper {
     }
 
     /**
-     * Pulls messages..
+     * Pulls messages.
      * <p/>
      * See <a href="https://cloud.google.com/pubsub/subscriber">cloud.google.com/pubsub/subscriber</a>
      */

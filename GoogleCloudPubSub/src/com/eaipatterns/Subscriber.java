@@ -1,3 +1,10 @@
+/*
+ * Example implementations for Enterprise Integration Patterns
+ * www.EnterpriseIntegrationPatterns.com
+ *
+ * Simple example of Publish-Subscribe Channel with Google Cloud PubSub
+ */
+
 package com.eaipatterns;
 
 import com.google.api.services.pubsub.model.Subscription;
@@ -7,9 +14,9 @@ import java.security.GeneralSecurityException;
 import java.util.List;
 
 public class Subscriber {
-    static final String PROJECT = "eaipubsub";
-    static final String TOPIC = "sometopic";
-    static final String SUBSCRIPTION = "mysubscription";
+    private static final String PROJECT = "eaipubsub";
+    private static final String TOPIC = "sometopic";
+    private static final String SUBSCRIPTION = "mysubscription";
 
     public static void main(String[] args) throws IOException, GeneralSecurityException {
         PubSubWrapper pubsub = PubSubWrapper.getInstance(

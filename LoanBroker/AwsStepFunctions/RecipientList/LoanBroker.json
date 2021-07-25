@@ -1,0 +1,112 @@
+{
+  "Comment": "EIP Loan Broker",
+  "StartAt": "Get Credit Score",
+  "States": {
+    "Get Credit Score": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "CreditBureau:$LATEST",
+        "Payload": {
+          "SSN.$": "$.SSN",
+          "RequestId.$": "$$.Execution.Id"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.Timeout"
+          ],
+          "BackoffRate": 2,
+          "IntervalSeconds": 1,
+          "MaxAttempts": 1,
+          "Comment": "OneMoreTime"
+        }
+      ],
+      "TimeoutSeconds": 1,
+      "ResultPath": "$.Credit",
+      "ResultSelector": {
+        "Score.$": "$.Payload.body.score",
+        "History.$": "$.Payload.body.history"
+      },
+      "Next": "Fetch Bank Addresses"
+    },
+    "Fetch Bank Addresses": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Parameters": {
+        "TableName": "LoanBrokerBanks",
+        "Key": {
+          "Type": {
+            "S": "Home"
+          }
+        }
+      },
+      "Next": "Request Quotes",
+      "ResultPath": "$.Banks",
+      "ResultSelector": {
+        "BankAddress.$": "$.Item.BankAddress.L[*].S"
+      }
+    },
+    "Request Quotes": {
+      "Type": "Map",
+      "Iterator": {
+        "StartAt": "Get Quote",
+        "States": {
+          "Get Quote": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Parameters": {
+              "FunctionName.$": "$.function",
+              "Payload": {
+                "SSN.$": "$.SSN",
+                "Amount.$": "$.Amount",
+                "Term.$": "$.Term",
+                "Credit.$": "$.Credit"
+              }
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException"
+                ],
+                "IntervalSeconds": 2,
+                "MaxAttempts": 1,
+                "BackoffRate": 2
+              }
+            ],
+            "End": true,
+            "TimeoutSeconds": 3,
+            "ResultPath": "$",
+            "ResultSelector": {
+              "Quote.$": "$.Payload"
+            }
+          }
+        }
+      },
+      "ItemsPath": "$.Banks.BankAddress",
+      "Parameters": {
+        "function.$": "$$.Map.Item.Value",
+        "SSN.$": "$.SSN",
+        "Amount.$": "$.Amount",
+        "Term.$": "$.Term",
+        "Credit.$": "$.Credit"
+      },
+      "ResultPath": "$.Quotes",
+      "Next": "Filter Results"
+    },
+    "Filter Results": {
+      "Type": "Pass",
+      "End": true,
+      "Parameters": {
+        "SSN.$": "$.SSN",
+        "Amount.$": "$.Amount",
+        "Term.$": "$.Term",
+        "Credit.$": "$.Credit",
+        "Quotes.$": "$.Quotes[*].Quote"
+      }
+    }
+  }
+}

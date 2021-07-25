@@ -17,7 +17,7 @@ import java.util.List;
 public class Publisher {
 
     private static final String PROJECT = "eaipubsub";
-    private static final String TOPIC = "sometopic";
+    private static final String TOPIC = "orders";
 
     public static void main(String[] args) throws IOException, GeneralSecurityException {
         PubSubWrapper pubsub = PubSubWrapper.getInstance(
@@ -25,9 +25,9 @@ public class Publisher {
                 System.getProperty("SERVICE_ACCOUNT_EMAIL"),
                 PROJECT);
 
-        String data = (args.length > 0) ? args[0] : "hello world";
+        String data = (args.length > 0) ? args[0] : "{ \"type\":\"widget\", \"quantity\":6, \"ID\":123 }";
         pubsub.createTopic(TOPIC);
-        List<String> messageIds = pubsub.publishMessage(TOPIC, data);
+        List<String> messageIds = pubsub.publishMessage(TOPIC, null, data);
         if (messageIds != null) {
             for (String messageId : messageIds) {
                 System.out.println("Published with a message id: " + messageId);

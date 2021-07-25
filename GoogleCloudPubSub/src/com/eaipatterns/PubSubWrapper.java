@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.security.GeneralSecurityException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * A thin wrapper around the Google Cloud PubSub API
@@ -86,9 +87,13 @@ class PubSubWrapper {
      *
      * @return List of message IDs or null if no message was published
      */
-    List<String> publishMessage(String topicName, String data) throws IOException {
+    List<String> publishMessage(String topicName, Map<String, String> attributes, String data) throws IOException {
         List<PubsubMessage> messages = Lists.newArrayList();
-        messages.add(new PubsubMessage().encodeData(data.getBytes("UTF-8")));
+        PubsubMessage msg = new PubsubMessage().encodeData(data.getBytes("UTF-8"));
+        if (attributes != null) {
+            msg.setAttributes(attributes);
+        }
+        messages.add(msg);
         PublishRequest publishRequest = new PublishRequest().setMessages(messages);
         PublishResponse publishResponse = pubsub.projects().topics()
                 .publish(getTopic(topicName), publishRequest)

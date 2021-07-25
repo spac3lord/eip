@@ -15,7 +15,7 @@ import java.util.List;
 
 public class Subscriber {
     private static final String PROJECT = "eaipubsub";
-    private static final String TOPIC = "sometopic";
+    private static final String TOPIC = "widgets";
     private static final String SUBSCRIPTION = "mysubscription";
 
     public static void main(String[] args) throws IOException, GeneralSecurityException {
@@ -24,10 +24,12 @@ public class Subscriber {
                 System.getProperty("SERVICE_ACCOUNT_EMAIL"),
                 PROJECT);
 
-        String subscription = (args.length > 0) ? args[0] : SUBSCRIPTION;
-        boolean doAck = args.length < 2 || args[1].toLowerCase().startsWith("ack");
+        String topic = (args.length > 0) ? args[0] : TOPIC;
+        String subscription = (args.length > 1) ? args[1] : SUBSCRIPTION;
+        boolean doAck = args.length < 3 || args[2].toLowerCase().startsWith("ack");
 
-        Subscription sub = pubsub.subscribeTopic(subscription, TOPIC);
+        pubsub.createTopic(topic);
+        Subscription sub = pubsub.subscribeTopic(subscription, topic);
         System.out.println("Subscribed " + sub.getName() + " to " + sub.getTopic());
         System.out.println("Ack: " + doAck);
         while (true) {

@@ -3,7 +3,7 @@
 //
 // Simple example of ReturnAddress in Go
 
-package ReturnAddress
+package main
 
 import "fmt"
 

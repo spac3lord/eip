@@ -1,0 +1,26 @@
+account=`aws sts get-caller-identity --query Account --output text`
+echo $account
+
+# edit this to reflect your role to be used
+role=arn:aws:iam::$account:role/service-role/CreditBureau-role-abcdefg
+
+zip BankSns.zip BankSns.js
+
+aws lambda delete-function --function-name=BankSnsPawnshop
+aws lambda delete-function --function-name=BankSnsUniversal
+aws lambda delete-function --function-name=BankSnsPremium
+
+aws lambda create-function --function-name=BankSnsPawnshop \
+    --runtime=nodejs12.x --handler=BankSns.handler --role=$role \
+    --environment="Variables={BANK_ID=PawnShop,BASE_RATE=5,MAX_LOAN_AMOUNT=500000,MIN_CREDIT_SCORE=400}" \
+    --zip-file=fileb://BankSns.zip
+
+aws lambda create-function --function-name=BankSnsUniversal \
+    --runtime=nodejs12.x --handler=BankSns.handler --role=$role \
+    --environment="Variables={BANK_ID=Universal,BASE_RATE=4,MAX_LOAN_AMOUNT=700000,MIN_CREDIT_SCORE=500}" \
+    --zip-file=fileb://BankSns.zip
+
+aws lambda create-function --function-name=BankSnsPremium \
+    --runtime=nodejs12.x --handler=BankSns.handler --role=$role \
+    --environment="Variables={BANK_ID=Premium,BASE_RATE=3,MAX_LOAN_AMOUNT=900000,MIN_CREDIT_SCORE=600}" \
+    --zip-file=fileb://BankSns.zip

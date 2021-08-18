@@ -1,0 +1,101 @@
+{
+  "Comment": "EIP Loan Broker",
+  "StartAt": "Get Credit Score",
+  "States": {
+    "Get Credit Score": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:us-east-2:976509018599:function:CreditBureau:$LATEST",
+        "Payload": {
+          "SSN.$": "$.SSN",
+          "RequestId.$": "$$.Execution.Id"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.Timeout"
+          ],
+          "BackoffRate": 2,
+          "IntervalSeconds": 1,
+          "MaxAttempts": 1,
+          "Comment": "OneMoreTime"
+        }
+      ],
+      "TimeoutSeconds": 1,
+      "ResultPath": "$.Credit",
+      "ResultSelector": {
+        "Score.$": "$.Payload.body.score",
+        "History.$": "$.Payload.body.history"
+      },
+      "Next": "SNS Publish"
+    },
+    "SNS Publish": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish.waitForTaskToken",
+      "Parameters": {
+        "Message.$": "$",
+        "TopicArn": "arn:aws:sns:us-east-2:976509018599:MortgageQuoteRequest",
+        "MessageAttributes": {
+          "RequestId": {
+            "DataType": "String",
+            "StringValue.$": "States.Format('{}::{}', $$.Execution.Id, $$.Task.Token)"
+          }
+        }
+      },
+      "End": true,
+      "TimeoutSeconds": 5,
+      "ResultPath": "$.Quotes",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.Timeout"
+          ],
+          "Next": "GetAggregate",
+          "ResultPath": "$.Error",
+          "Comment": "Timeout"
+        }
+      ]
+    },
+    "GetAggregate": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "arn:aws:lambda:us-east-2:976509018599:function:GetAggregate:$LATEST",
+        "Payload": {
+          "Id.$": "$$.Execution.Id"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException"
+          ],
+          "IntervalSeconds": 2,
+          "MaxAttempts": 6,
+          "BackoffRate": 2
+        }
+      ],
+      "ResultPath": "$.result",
+      "ResultSelector": {
+        "Quotes.$": "$.Payload.Quotes"
+      },
+      "Next": "Transform"
+    },
+    "Transform": {
+      "Type": "Pass",
+      "End": true,
+      "Parameters": {
+        "SSN.$": "$.SSN",
+        "Amount.$": "$.Amount",
+        "Term.$": "$.Term",
+        "Credit.$": "$.Credit",
+        "Quotes.$": "$.result.Quotes"
+      }
+    }
+  }
+}
+

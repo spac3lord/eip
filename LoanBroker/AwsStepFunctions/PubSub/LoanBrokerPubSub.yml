@@ -1,0 +1,24 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Parameters:
+  BankRole:
+    Type: String
+Resources:
+  BankSnsPawnShop:
+      Type: AWS::Lambda::Function
+      DeletionPolicy: Retain
+      Properties:
+          Runtime: nodejs12.x
+          Code:
+            S3Bucket: loanbroker-source
+            S3Key: BankSns
+          Handler: BankSns.handler
+          Role: 
+            Ref: BankRole
+          FunctionName: 'BankSnsPawnShop2'
+          Description: 'Pawn Shop'
+          Environment:
+              Variables:
+                BANK_ID: PawnShop
+                BASE_RATE: '5'
+                MAX_LOAN_AMOUNT: '500000'
+                MIN_CREDIT_SCORE: '400'

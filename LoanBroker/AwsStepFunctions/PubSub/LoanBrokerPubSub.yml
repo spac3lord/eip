@@ -2,23 +2,221 @@ AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
   BankRole:
     Type: String
+
 Resources:
+
   BankSnsPawnShop:
-      Type: AWS::Lambda::Function
-      DeletionPolicy: Retain
-      Properties:
-          Runtime: nodejs12.x
-          Code:
-            S3Bucket: loanbroker-source
-            S3Key: BankSns
-          Handler: BankSns.handler
-          Role: 
-            Ref: BankRole
-          FunctionName: 'BankSnsPawnShop2'
-          Description: 'Pawn Shop'
-          Environment:
-              Variables:
-                BANK_ID: PawnShop
-                BASE_RATE: '5'
-                MAX_LOAN_AMOUNT: '500000'
-                MIN_CREDIT_SCORE: '400'
+    Type: AWS::Lambda::Function
+    DeletionPolicy: Delete
+    Properties:
+      Runtime: nodejs12.x
+      Code:
+        S3Bucket: loanbroker-source
+        S3Key: BankSns
+      Handler: BankSns.handler
+      Role:
+        Ref: BankRole
+      FunctionName: 'BankSns2PawnShop'
+      Description: 'Pawn Shop'
+      Environment:
+        Variables:
+          BANK_ID: PawnShop
+          BASE_RATE: 5
+          MAX_LOAN_AMOUNT: 500000
+          MIN_CREDIT_SCORE: 400
+
+  BankSnsUniversal:
+    Type: AWS::Lambda::Function
+    DeletionPolicy: Delete
+    Properties:
+      Runtime: nodejs12.x
+      Code:
+        S3Bucket: loanbroker-source
+        S3Key: BankSns
+      Handler: BankSns.handler
+      Role:
+        Ref: BankRole
+      FunctionName: 'BankSns2Universal'
+      Description: 'Universal Bank'
+      Environment:
+        Variables:
+          BANK_ID: PawnShop
+          BASE_RATE: 4
+          MAX_LOAN_AMOUNT: 700000
+          MIN_CREDIT_SCORE: 500
+
+  BankSnsPremium:
+    Type: AWS::Lambda::Function
+    DeletionPolicy: Delete
+    Properties:
+      Runtime: nodejs12.x
+      Code:
+        S3Bucket: loanbroker-source
+        S3Key: BankSns
+      Handler: BankSns.handler
+      Role:
+        Ref: BankRole
+      FunctionName: 'BankSns2Premium'
+      Description: 'Premium Bank'
+      Environment:
+        Variables:
+          BANK_ID: PawnShop
+          BASE_RATE: 3
+          MAX_LOAN_AMOUNT: 900000
+          MIN_CREDIT_SCORE: 600
+
+# Create Quote Request Channel and Subscribe Banks
+
+  QuoteRequestChannel:
+    Type: AWS::SNS::Topic
+    DeletionPolicy: Delete
+    Properties:
+      TopicName: MortgageQuoteRequest2
+
+  BankPawnShopSubscription:
+    Type: AWS::SNS::Subscription
+    DeletionPolicy: Delete
+    Properties:
+      TopicArn: !Ref QuoteRequestChannel
+      Protocol: lambda
+      Endpoint: !GetAtt BankSnsPawnShop.Arn
+
+  BankUniversalSubscription:
+    Type: AWS::SNS::Subscription
+    DeletionPolicy: Delete
+    Properties:
+      TopicArn: !Ref QuoteRequestChannel
+      Protocol: lambda
+      Endpoint: !GetAtt BankSnsUniversal.Arn
+
+  BankPremiumSubscription:
+    Type: AWS::SNS::Subscription
+    DeletionPolicy: Delete
+    Properties:
+      TopicArn: !Ref QuoteRequestChannel
+      Protocol: lambda
+      Endpoint: !GetAtt BankSnsPremium.Arn
+
+  BankPawnShopInvokePermission:
+    Type: 'AWS::Lambda::Permission'
+    DeletionPolicy: Delete
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref BankSnsPawnShop
+      Principal: sns.amazonaws.com
+      SourceArn: !Ref QuoteRequestChannel
+
+  BankUniversalInvokePermission:
+    Type: 'AWS::Lambda::Permission'
+    DeletionPolicy: Delete
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref BankSnsUniversal
+      Principal: sns.amazonaws.com
+      SourceArn: !Ref QuoteRequestChannel
+
+  BankPremiumInvokePermission:
+    Type: 'AWS::Lambda::Permission'
+    DeletionPolicy: Delete
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref BankSnsPremium
+      Principal: sns.amazonaws.com
+      SourceArn: !Ref QuoteRequestChannel
+
+# Create Mortgage Response Channel and Link to Banks via Destination and EventBridge
+
+  QuoteResponseChannel:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Delete
+    Properties:
+      QueueName: MortgageQuotes2
+      MessageRetentionPeriod: 300
+
+  AllowMessagesToResponseChannel:    
+    Type: AWS::SQS::QueuePolicy
+    DeletionPolicy: Delete
+    Properties:
+      Queues:
+        - !Ref QuoteResponseChannel
+      PolicyDocument:
+        Statement:
+          - Action:
+              - "SQS:SendMessage"
+              - "SQS:ReceiveMessage"
+              - "SQS:DeleteMessage"
+              - "SQS:ChangeMessageVisibility"
+            Effect: "Allow"
+            Resource: !GetAtt QuoteResponseChannel.Arn
+            Principal:
+              AWS: !Ref AWS::AccountId
+          - Action:
+              - "SQS:SendMessage"
+            Effect: "Allow"
+            Resource: !GetAtt QuoteResponseChannel.Arn
+            Principal:
+              Service: events.amazonaws.com
+
+  FilterMortgageQuotesBus:
+    Type: AWS::Events::EventBus
+    DeletionPolicy: Delete
+    Properties:
+      Name: LoanBroker2
+
+  AllowPutEvents:
+    Type: AWS::Events::EventBusPolicy
+    DeletionPolicy: Delete
+    Properties:
+      EventBusName: !GetAtt FilterMortgageQuotesBus.Name
+      StatementId: AllowPutEventsToBus
+      Statement:
+        Effect: Allow
+        Principal:
+          AWS: !Ref AWS::AccountId
+        Action: "events:PutEvents"
+        Resource: !GetAtt FilterMortgageQuotesBus.Arn
+
+  RouteMortgageQuotes:
+    Type: AWS::Events::Rule
+    DeletionPolicy: Retain
+    Properties:
+      Name: RouteMortgageQuotes2
+      Description: "Filter out empty quotes"
+      EventBusName: !GetAtt FilterMortgageQuotesBus.Name
+      EventPattern:
+        detail:
+          requestContext:
+            functionArn: [{ prefix: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:BankSns2' }]
+          responsePayload:
+            bankId: [{ exists: true }]
+      Targets:
+        - Arn: !GetAtt QuoteResponseChannel.Arn
+          InputPath: $.detail.responsePayload
+          Id: MortgageQuotes
+
+  SendQuotePawnShop:
+    Type: AWS::Lambda::EventInvokeConfig
+    Properties:
+      FunctionName: !Ref BankSnsPawnShop
+      Qualifier: $LATEST
+      DestinationConfig:
+        OnSuccess:
+          Destination: !GetAtt FilterMortgageQuotesBus.Arn
+
+  SendQuoteUniversal:
+    Type: AWS::Lambda::EventInvokeConfig
+    Properties:
+      FunctionName: !Ref BankSnsUniversal
+      Qualifier: $LATEST
+      DestinationConfig:
+        OnSuccess:
+          Destination: !GetAtt FilterMortgageQuotesBus.Arn
+
+  SendQuotePremium:
+    Type: AWS::Lambda::EventInvokeConfig
+    Properties:
+      FunctionName: !Ref BankSnsPremium
+      Qualifier: $LATEST
+      DestinationConfig:
+        OnSuccess:
+          Destination: !GetAtt FilterMortgageQuotesBus.Arn

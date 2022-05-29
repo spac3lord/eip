@@ -13,7 +13,6 @@ exports.creditBureau = (req, res) => {
   if (ssn_regex.test(req.query.SSN)) {
     res.status(200).send(JSON.stringify(
       {
-        statusCode: 200,
         request_id: req.query.RequestId,
         body: {
           SSN: req.query.SSN,

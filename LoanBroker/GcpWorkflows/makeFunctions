@@ -1,0 +1,14 @@
+gcloud pubsub topics create QuoteRequest
+gcloud pubsub topics create QuoteResponse
+
+gcloud functions deploy BankPawnshop --entry-point=bank --region=asia-southeast1 \
+    --source=Bank --runtime=nodejs14 --trigger-topic QuoteRequest \
+    --set-env-vars MAX_LOAN_AMOUNT=500000,MIN_CREDIT_SCORE=400,BASE_RATE=5,BANK_ID=BankPawnshop,QUOTE_RESP_TOPIC=QuoteResponse
+
+gcloud functions deploy BankUniversal --entry-point=bank --region=asia-southeast1 \
+    --source=Bank --runtime=nodejs14 --trigger-topic QuoteRequest \
+    --set-env-vars MAX_LOAN_AMOUNT=700000,MIN_CREDIT_SCORE=500,BASE_RATE=4,BANK_ID=BankUniversal,QUOTE_RESP_TOPIC=QuoteResponse
+
+gcloud functions deploy BankPremium --entry-point=bank --region=asia-southeast1 \
+    --source=Bank --runtime=nodejs14 --trigger-topic QuoteRequest \
+    --set-env-vars MAX_LOAN_AMOUNT=900000,MIN_CREDIT_SCORE=600,BASE_RATE=3,BANK_ID=BankPremium,QUOTE_RESP_TOPIC=QuoteResponse

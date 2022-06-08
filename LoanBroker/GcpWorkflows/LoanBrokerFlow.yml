@@ -1,0 +1,57 @@
+ # serverless Loan Broker implementation on GCP. See eaipatterns.com
+
+main:
+  params: [input]
+  steps:
+    - init:
+        assign:
+          - project: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
+          - location: "asia-southeast1"
+          - topic: "QuoteRequest"
+    - get_function:
+        call: googleapis.cloudfunctions.v1.projects.locations.functions.get
+
+        args:
+          name: ${"projects/" + project + "/locations/" + location + "/functions/CreditBureau"}
+        result: creditBureau
+    - getCreditScore:
+        call: http.get
+        args:
+          url: ${creditBureau.httpsTrigger.url}
+          query:
+            RequestId: ${sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID")}
+            SSN: ${input.SSN}
+        result: creditBureauResponse
+    - logCreditBureauResult:
+        call: sys.log
+        args:
+          data: ${creditBureauResponse.body}
+          severity: INFO
+    - setQuoteRequest:
+        assign:
+          - creditScore:
+              ${json.decode(creditBureauResponse.body).body}
+          - quoteRequest:
+              SSN: ${input.SSN}
+              Amount: ${input.Amount}
+              Term: ${input.Term}
+              Credit:
+                Score: ${creditScore.score}
+                History: ${creditScore.history}
+          - base64Msg: ${base64.encode(json.encode(quoteRequest))}
+    - logQuoteRequest:
+        call: sys.log
+        args:
+          json: ${quoteRequest}
+          severity: INFO
+    - sendQuoteRequest:
+        call: googleapis.pubsub.v1.projects.topics.publish
+        args:
+            topic: ${"projects/" + project + "/topics/" + topic}
+            body:
+              messages:
+                - data: ${base64Msg}
+                  attributes:
+                    RequestId: ${sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID")}
+    - returnOutput:
+            return: "Boo"

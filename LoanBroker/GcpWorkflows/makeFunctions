@@ -1,6 +1,10 @@
 gcloud pubsub topics create QuoteRequest
 gcloud pubsub topics create QuoteResponse
 
+gcloud functions deploy CreditBureau --entry-point=creditBureau --region=asia-southeast1 \
+      --source=CreditBureau --runtime=nodejs14 \
+      --trigger-http --allow-unauthenticated
+
 gcloud functions deploy BankPawnshop --entry-point=bank --region=asia-southeast1 \
     --source=Bank --runtime=nodejs14 --trigger-topic QuoteRequest \
     --set-env-vars MAX_LOAN_AMOUNT=500000,MIN_CREDIT_SCORE=400,BASE_RATE=5,BANK_ID=BankPawnshop,QUOTE_RESP_TOPIC=QuoteResponse

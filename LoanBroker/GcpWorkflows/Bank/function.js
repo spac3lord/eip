@@ -10,9 +10,8 @@ function calcRate(amount, term, score, history) {
 
 exports.bank = async (message, context) => {
     const request = message.data ? Buffer.from(message.data, 'base64').toString() : '{}';
-    console.log(message.attributes);
     const requestId = message.attributes["RequestId"];
-    console.log(request);
+    console.log(request, requestId);
     const quoteRequest = JSON.parse(request); 
     const bankId = process.env.BANK_ID;
     const responseTopic = process.env.QUOTE_RESP_TOPIC;

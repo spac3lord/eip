@@ -1,0 +1,88 @@
+ # serverless Loan Broker implementation on GCP. See eaipatterns.com
+
+ main:
+  params: [input]
+  steps:
+    - init:
+        assign:
+          - project: ${sys.get_env("GOOGLE_CLOUD_PROJECT_ID")}
+          - location: "asia-southeast1"
+          - topic: "QuoteRequest"
+    - get_function:
+        call: googleapis.cloudfunctions.v1.projects.locations.functions.get
+
+        args:
+          name: ${"projects/" + project + "/locations/" + location + "/functions/CreditBureau"}
+        result: creditBureau
+    - getCreditScore:
+        call: http.get
+        args:
+          url: ${creditBureau.httpsTrigger.url}
+          query:
+            RequestId: ${sys.get_env("GOOGLE_CLOUD_WORKFLOW_EXECUTION_ID")}
+            SSN: ${input.SSN}
+        result: creditBureauResponse
+    - logCreditBureauResult:
+        call: sys.log
+        args:
+          data: ${creditBureauResponse.body}
+          severity: INFO
+    - setQuoteRequest:
+        assign:
+          - creditScore:
+              ${json.decode(creditBureauResponse.body).body}
+          - quoteRequest:
+              SSN: ${input.SSN}
+              Amount: ${input.Amount}
+              Term: ${input.Term}
+              Credit:
+                Score: ${creditScore.score}
+                History: ${creditScore.history}
+          - base64Msg: ${base64.encode(json.encode(quoteRequest))}
+    - logQuoteRequest:
+        call: sys.log
+        args:
+          json: ${quoteRequest}
+          severity: INFO
+    - create_callback:
+        call: events.create_callback_endpoint
+        args:
+            http_callback_method: "POST"
+        result: callback_details
+    - print_callback_details:
+        call: sys.log
+        args:
+            severity: "INFO"
+            text: ${"Listening for callbacks on " + callback_details.url}
+    - sendQuoteRequest:
+        call: googleapis.pubsub.v1.projects.topics.publish
+        args:
+            topic: ${"projects/" + project + "/topics/" + topic}
+            body:
+              messages:
+                - data: ${base64Msg}
+                  attributes:
+                    RequestId: ${callback_details.url}
+    - await_callback:
+        try:
+            call: events.await_callback
+            args:
+                callback: ${callback_details}
+                timeout: 30.0
+            result: aggregate_quotes
+        except:
+            as: e
+            steps:
+                - log_error:
+                    call: sys.log
+                    args:
+                        severity: "WARNING"
+                        text: ${"Error " + e.message}
+                    next: end
+    - print_callback_data:
+        call: sys.log
+        args:
+            severity: "INFO"
+            text: ${aggregate_quotes}
+    - returnOutput:
+            return: ${aggregate_quotes.http_request.body}

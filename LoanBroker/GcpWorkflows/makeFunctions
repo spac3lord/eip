@@ -16,3 +16,8 @@ gcloud functions deploy BankUniversal --entry-point=bank --region=asia-southeast
 gcloud functions deploy BankPremium --entry-point=bank --region=asia-southeast1 \
     --source=Bank --runtime=nodejs14 --trigger-topic QuoteRequest \
     --set-env-vars MAX_LOAN_AMOUNT=900000,MIN_CREDIT_SCORE=600,BASE_RATE=3,BANK_ID=BankPremium,QUOTE_RESP_TOPIC=QuoteResponse
+
+gcloud app create --region=asia-southeast1
+gcloud datastore databases create --region=asia-southeast1
+gcloud functions deploy Aggregator --source=Aggregator --entry-point=handle_quote \
+      --region=asia-southeast1 --runtime=python39 --trigger-topic=QuoteResponse --retry

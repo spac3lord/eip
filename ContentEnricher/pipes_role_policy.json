@@ -1,0 +1,34 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "sqs:ReceiveMessage",
+                "sqs:DeleteMessage",
+                "sqs:GetQueueAttributes"
+            ],
+            "Resource": [
+                "arn:aws:sqs:ap-southeast-1:*:EntityIDs"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "sqs:SendMessage"
+            ],
+            "Resource": [
+                "arn:aws:sqs:ap-southeast-1:*:EntityUpdates"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "lambda:InvokeFunction"
+            ],
+            "Resource": [
+                "arn:aws:lambda:ap-southeast-1:*:function:*"
+            ]
+        }
+    ]
+}

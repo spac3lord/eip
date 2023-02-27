@@ -1,0 +1,58 @@
+{
+    "Entities": [
+        {
+            "PutRequest": {
+                "Item": {
+                    "id": {
+                        "S": "123"
+                    },
+                    "Type": {
+                        "S": "Order"
+                    },
+                    "Customer": {
+                        "S": "Pete's Pizza"
+                    }, 
+                    "Amount": {
+                        "S": "12.34"
+                    }
+                }
+            }
+        },        
+        {
+            "PutRequest": {
+                "Item": {
+                    "id": {
+                        "S": "456"
+                    },
+                    "Type": {
+                        "S": "Order"
+                    },
+                    "Customer": {
+                        "S": "Mary's Muffins"
+                    }, 
+                    "Amount": {
+                        "S": "22.22"
+                    }
+                }
+            }
+        },
+        {
+            "PutRequest": {
+                "Item": {
+                    "id": {
+                        "S": "789"
+                    },
+                    "Type": {
+                        "S": "Order"
+                    },
+                    "Customer": {
+                        "S": "Sam's Sushi"
+                    }, 
+                    "Amount": {
+                        "S": "999.99"
+                    }
+                }
+            }
+        } 
+    ]
+}
